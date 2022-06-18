@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 
+#[derive(Default)]
 pub struct Bullet {
     pub position: Vec2,
     pub velocity: Vec2,

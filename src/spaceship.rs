@@ -4,6 +4,7 @@ use crate::wrap_around;
 
 pub const SHIP_HEIGHT: f32 = 25.;
 pub const SHIP_BASE: f32 = 22.;
+#[derive(Default)]
 pub struct Ship {
     pub position: Vec2,
     pub rotation: f32,

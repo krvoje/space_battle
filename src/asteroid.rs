@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 use crate::wrap_around;
 
+#[derive(Default)]
 pub struct Asteroid {
     pub position: Vec2,
     pub velocity: Vec2,

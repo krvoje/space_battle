@@ -25,8 +25,10 @@ fn wrap_around(v: &Vec2) -> Vec2 {
     vr
 }
 
+#[derive(Default)]
 struct Game {
-    ship: Ship,
+    ship1: Ship,
+    ship2: Ship,
     bullets: Vec<Bullet>,
     asteroids: Vec<Asteroid>,
     sides: u8,
@@ -35,24 +37,17 @@ struct Game {
 
 impl Game {
     fn new() -> Game {
-        let mut game = Game {
-            ship: Ship::new(),
-            bullets: Vec::new(),
-            asteroids: Vec::new(),
-            sides: 2,
-            is_gameover: false
-        };
-        for _ in 0..2 {
-            game.add_asteroid();
-        }
+        let mut game = Game::default();
+        game.reset(3);
         game
     }
 
-    fn reset(&mut self) {
-        self.ship = Ship::new();
+    fn reset(&mut self, sides: u8) {
+        self.ship1 = Ship::new();
+        self.ship2 = Ship::new();
         self.bullets.clear();
         self.asteroids.clear();
-        self.sides = 2;
+        self.sides = sides;
         self.is_gameover = false;
         for _ in 0..self.sides {
             self.add_asteroid();
@@ -60,18 +55,11 @@ impl Game {
     }
 
     fn next_level(&mut self) {
-        self.ship = Ship::new();
-        self.bullets.clear();
-        self.asteroids.clear();
-        self.sides = self.sides + 1;
-        self.is_gameover = false;
-        for _ in 0..self.sides {
-            self.add_asteroid();
-        }
+        self.reset(self.sides + 1)
     }
 
     fn add_asteroid(&mut self) {
-        self.asteroids.push(Asteroid::new(gen_range(2, self.sides)))
+        self.asteroids.push(Asteroid::new(gen_range(3, self.sides)))
     }
 }
 
@@ -88,19 +76,36 @@ async fn main() {
         let frame_t = get_time();
 
         if is_key_down(KeyCode::Up) {
-            game.ship.accelerate();
+            game.ship1.accelerate();
         } else {
-            game.ship.retardate();
+            game.ship1.retardate();
         }
 
-        if is_key_down(KeyCode::Space) && frame_t - last_shot > 0.1 {
-            game.bullets.push(game.ship.fire_bullet(frame_t));
+        if is_key_down(KeyCode::W) {
+            game.ship2.accelerate();
+        } else {
+            game.ship2.retardate();
+        }
+
+        if is_key_pressed(KeyCode::Down) && frame_t - last_shot > 0.1 {
+            game.bullets.push(game.ship1.fire_bullet(frame_t));
             last_shot = frame_t;
         }
+        if is_key_pressed(KeyCode::S) && frame_t - last_shot > 0.1 {
+            game.bullets.push(game.ship2.fire_bullet(frame_t));
+            last_shot = frame_t;
+        }
+
         if is_key_down(KeyCode::Right) {
-            game.ship.rotate_right();
+            game.ship1.rotate_right();
         } else if is_key_down(KeyCode::Left) {
-            game.ship.rotate_left();
+            game.ship1.rotate_left();
+        }
+
+        if is_key_down(KeyCode::D) {
+            game.ship2.rotate_right();
+        } else if is_key_down(KeyCode::A) {
+            game.ship2.rotate_left();
         }
 
         for bullet in game.bullets.iter_mut() {
@@ -114,7 +119,11 @@ async fn main() {
 
         let mut new_asteroids = Vec::new();
         for asteroid in game.asteroids.iter_mut() {
-            if (asteroid.position - game.ship.position).length() < asteroid.size + SHIP_HEIGHT / 3. {
+            if (asteroid.position - game.ship1.position).length() < asteroid.size + SHIP_HEIGHT / 3. {
+                game.is_gameover = true;
+                break;
+            }
+            if (asteroid.position - game.ship2.position).length() < asteroid.size + SHIP_HEIGHT / 3. {
                 game.is_gameover = true;
                 break;
             }
@@ -122,7 +131,7 @@ async fn main() {
                 if (asteroid.position - bullet.position).length() < asteroid.size {
                     asteroid.collided = true;
                     bullet.collided = true;
-                    if asteroid.sides > 2 {
+                    if asteroid.sides > 3 {
                         new_asteroids.push(Asteroid {
                             position: asteroid.position,
                             velocity: Vec2::new(bullet.velocity.y, -bullet.velocity.x).normalize()
@@ -170,7 +179,8 @@ async fn main() {
             asteroid.draw();
         }
 
-        game.ship.draw();
+        game.ship1.draw();
+        game.ship2.draw();
         next_frame().await
     }
 }
@@ -197,8 +207,8 @@ async fn gameover(game: &mut Game) {
 
     if is_win {
         game.next_level();
-    } else {
-        game.reset();
+    } else if is_key_down(KeyCode::Enter){
+        game.reset(2);
     }
 
     next_frame().await;
